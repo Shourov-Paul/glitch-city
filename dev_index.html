@@ -12,6 +12,18 @@
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="ui-layer">
+
+
+            <div id="touch-controls">
+                <div class="touch-btn touch-dpad">
+                    <div id="btn-up" class="touch-btn dpad-btn">▲</div>
+                    <div id="btn-down" class="touch-btn dpad-btn">▼</div>
+                    <div id="btn-left" class="touch-btn dpad-btn">◀</div>
+                    <div id="btn-right" class="touch-btn dpad-btn">▶</div>
+                </div>
+                <div id="btn-dash" class="touch-btn">DASH</div>
+            </div>
+
             <div id="hud">
                 <div class="hud-panel" id="stats-panel">
                     <div id="score-display">SCORE <span id="score-value">0</span></div>
@@ -30,6 +42,10 @@
                 </div>
             </div>
             <div id="start-screen" class="screen active">
+                <div id="sound-controls">
+                    <button id="btn-music" class="sound-btn">MUSIC: ON</button>
+                    <button id="btn-sfx" class="sound-btn">SFX: ON</button>
+                </div>
                 <h1>GLITCH CITY</h1>
                 <div id="best-score-display">BEST SCORE: <span id="start-best-score">0</span></div>
                 <p>Use WASD to Move. Avoid Glitches.</p>

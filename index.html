@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glitch City (Bundled)</title>
+    <title>Glitch City</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -278,6 +278,41 @@
             }
         }
 
+        /* Sound Controls */
+        #sound-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+            pointer-events: auto;
+        }
+
+        .sound-btn {
+            background: transparent;
+            border: 2px solid var(--neon-green);
+            color: var(--neon-green);
+            font-family: 'Press Start 2P', monospace;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+
+        .sound-btn:hover {
+            background: var(--neon-green);
+            color: var(--bg-color);
+            box-shadow: 0 0 15px var(--neon-green);
+        }
+
+        .sound-btn.muted {
+            border-color: #555;
+            color: #555;
+            opacity: 0.7;
+        }
+
         /* Touch Controls */
         #touch-controls {
             display: none;
@@ -368,6 +403,7 @@
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="ui-layer">
+
             <div id="hud">
                 <div class="hud-panel" id="stats-panel">
                     <div id="score-display">SCORE <span id="score-value">0</span></div>
@@ -386,6 +422,10 @@
                 </div>
             </div>
             <div id="start-screen" class="screen active">
+                <div id="sound-controls">
+                    <button id="btn-music" class="sound-btn">MUSIC: ON</button>
+                    <button id="btn-sfx" class="sound-btn">SFX: ON</button>
+                </div>
                 <h1>GLITCH CITY</h1>
                 <div id="best-score-display">BEST SCORE: <span id="start-best-score">0</span></div>
                 <p>Use WASD to Move. Avoid Glitches.</p>
@@ -1181,6 +1221,24 @@
                 this.masterGain = null;
                 this.isInitialized = false;
                 this.ambientOsc = null;
+                this.musicMuted = false;
+                this.sfxMuted = false;
+            }
+
+            toggleMusic() {
+                this.musicMuted = !this.musicMuted;
+                if (this.musicMuted && this.ambientOsc) {
+                    this.ambientOsc.stop();
+                    this.ambientOsc = null;
+                } else if (!this.musicMuted && this.isInitialized) {
+                    this.startAmbient();
+                }
+                return this.musicMuted;
+            }
+
+            toggleSFX() {
+                this.sfxMuted = !this.sfxMuted;
+                return this.sfxMuted;
             }
 
             init() {
@@ -1190,7 +1248,7 @@
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.ctx = new AudioContext();
                     this.masterGain = this.ctx.createGain();
-                    this.masterGain.gain.value = 0.3;
+                    this.masterGain.gain.value = 0; // Start silent
                     this.masterGain.connect(this.ctx.destination);
                     this.isInitialized = true;
                     console.log('SoundSystem Initialized');
@@ -1201,16 +1259,25 @@
 
             resume() {
                 if (!this.ctx) this.init();
+                const startAudio = () => {
+                    console.log('AudioContext Active');
+                    // Fade in master volume
+                    this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+                    this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
+                    this.masterGain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 0.5);
+
+                    if (!this.musicMuted) this.startAmbient();
+                };
+
                 if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume().then(() => {
-                        console.log('AudioContext Resumed');
-                        this.startAmbient();
-                    });
+                    this.ctx.resume().then(startAudio);
+                } else if (this.ctx && this.ctx.state === 'running') {
+                    startAudio();
                 }
             }
 
             playCollect() {
-                if (!this.ctx) return;
+                if (!this.ctx || this.sfxMuted) return;
 
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
@@ -1230,7 +1297,7 @@
             }
 
             playGlitch() {
-                if (!this.ctx) return;
+                if (!this.ctx || this.sfxMuted) return;
 
                 const bufferSize = this.ctx.sampleRate * 0.2;
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -1254,7 +1321,7 @@
             }
 
             startAmbient() {
-                if (!this.ctx || this.ambientOsc) return;
+                if (!this.ctx || this.ambientOsc || this.musicMuted) return;
 
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
@@ -1268,12 +1335,18 @@
                 lfo.frequency.value = 0.2;
                 lfoGain.gain.value = 0.1;
 
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 200;
+
                 lfo.connect(lfoGain);
                 lfoGain.connect(gain.gain);
 
-                gain.gain.value = 0.2;
+                gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + 2.0);
 
-                osc.connect(gain);
+                osc.connect(filter);
+                filter.connect(gain);
                 gain.connect(this.masterGain);
 
                 osc.start();
@@ -1282,7 +1355,7 @@
             }
 
             playDash() {
-                if (!this.ctx) return;
+                if (!this.ctx || this.sfxMuted) return;
 
                 const bufferSize = this.ctx.sampleRate * 0.3;
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -1367,7 +1440,7 @@
                 const noteLength = 0.115;
 
                 this.musicInterval = setInterval(() => {
-                    if (this.ctx.state === 'suspended') return;
+                    if (this.ctx.state === 'suspended' || this.musicMuted) return;
 
                     if (step % 4 === 0) kick();
                     if (step % 4 === 2) hihat();
@@ -1380,7 +1453,7 @@
             }
 
             playHit() {
-                if (!this.ctx) return;
+                if (!this.ctx || this.sfxMuted) return;
 
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
@@ -1522,6 +1595,34 @@
         const backgroundSystem = new BackgroundSystem(Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
         const juiceSystem = new JuiceSystem();
         const soundSystem = new SoundSystem();
+
+        // Sound Controls Binding
+        const btnMusic = document.getElementById('btn-music');
+        const btnSFX = document.getElementById('btn-sfx');
+
+        btnMusic.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent game interaction
+            const isMuted = soundSystem.toggleMusic();
+            btnMusic.innerText = isMuted ? "MUSIC: OFF" : "MUSIC: ON";
+            btnMusic.classList.toggle('muted', isMuted);
+        });
+
+        btnSFX.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isMuted = soundSystem.toggleSFX();
+            btnSFX.innerText = isMuted ? "SFX: OFF" : "SFX: ON";
+            btnSFX.classList.toggle('muted', isMuted);
+        });
+
+        // Touch/Click to init sound (but don't toggle if clicking button)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('sound-btn')) return;
+            soundSystem.resume();
+        }, { once: true });
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('sound-btn')) return;
+            soundSystem.resume();
+        }, { once: true });
 
         const startScreen = new StartScreen(startGameWrapper);
         const gameOverScreen = new GameOverScreen(startGameWrapper, goToMainMenu);

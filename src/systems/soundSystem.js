@@ -4,6 +4,8 @@ export class SoundSystem {
         this.masterGain = null;
         this.isInitialized = false;
         this.ambientOsc = null;
+        this.musicMuted = false;
+        this.sfxMuted = false;
     }
 
     init() {
@@ -13,7 +15,7 @@ export class SoundSystem {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioContext();
             this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.3; // Default volume 30%
+            this.masterGain.gain.value = 0; // Start silent to prevent pop
             this.masterGain.connect(this.ctx.destination);
             this.isInitialized = true;
             console.log('SoundSystem Initialized');
@@ -24,16 +26,42 @@ export class SoundSystem {
 
     resume() {
         if (!this.ctx) this.init();
+
+        const startAudio = () => {
+            console.log('AudioContext Active');
+            // Fade in master volume to prevent popping
+            this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+            this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
+            this.masterGain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 0.5);
+
+            if (!this.musicMuted) this.startAmbient();
+        };
+
         if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume().then(() => {
-                console.log('AudioContext Resumed');
-                this.startAmbient();
-            });
+            this.ctx.resume().then(startAudio);
+        } else if (this.ctx && this.ctx.state === 'running') {
+            startAudio();
         }
     }
 
+    toggleMusic() {
+        this.musicMuted = !this.musicMuted;
+        if (this.musicMuted && this.ambientOsc) {
+            this.ambientOsc.stop();
+            this.ambientOsc = null;
+        } else if (!this.musicMuted && this.isInitialized) {
+            this.startAmbient();
+        }
+        return this.musicMuted;
+    }
+
+    toggleSFX() {
+        this.sfxMuted = !this.sfxMuted;
+        return this.sfxMuted;
+    }
+
     playCollect() {
-        if (!this.ctx) return;
+        if (!this.ctx || this.sfxMuted) return;
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -53,7 +81,7 @@ export class SoundSystem {
     }
 
     playGlitch() {
-        if (!this.ctx) return;
+        if (!this.ctx || this.sfxMuted) return;
 
         const bufferSize = this.ctx.sampleRate * 0.2; // 0.2 seconds
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -77,7 +105,7 @@ export class SoundSystem {
     }
 
     startAmbient() {
-        if (!this.ctx || this.ambientOsc) return;
+        if (!this.ctx || this.ambientOsc || this.musicMuted) return;
 
         // Low drone
         const osc = this.ctx.createOscillator();
@@ -93,12 +121,18 @@ export class SoundSystem {
         lfo.frequency.value = 0.2; // Very slow
         lfoGain.gain.value = 0.1; // Modulation depth
 
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 200; // Muffle the sawtooth to a drone
+
         lfo.connect(lfoGain);
         lfoGain.connect(gain.gain);
 
-        gain.gain.value = 0.2; // Base ambient volume
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + 2.0); // Slow fade in for ambient
 
-        osc.connect(gain);
+        osc.connect(filter);
+        filter.connect(gain);
         gain.connect(this.masterGain);
 
         osc.start();
@@ -107,7 +141,7 @@ export class SoundSystem {
     }
 
     playDash() {
-        if (!this.ctx) return;
+        if (!this.ctx || this.sfxMuted) return;
 
         // Filter Sweep "Whoosh"
         const bufferSize = this.ctx.sampleRate * 0.3;
@@ -197,7 +231,7 @@ export class SoundSystem {
         // For production, lookahead scheduling is better, but this suffices for a game loop context if called frequently,
         // or we just use setInterval.
         this.musicInterval = setInterval(() => {
-            if (this.ctx.state === 'suspended') return;
+            if (this.ctx.state === 'suspended' || this.musicMuted) return;
 
             // 4/4 Beat
             if (step % 4 === 0) kick(); // Kick on beats
@@ -212,7 +246,7 @@ export class SoundSystem {
     }
 
     playHit() {
-        if (!this.ctx) return;
+        if (!this.ctx || this.sfxMuted) return;
 
         // Distorted Crunch
         const osc = this.ctx.createOscillator();

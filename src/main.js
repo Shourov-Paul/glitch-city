@@ -1,6 +1,7 @@
 import { Config } from './config.js';
 import { GameLoop } from './gameLoop.js';
 import { InputHandler } from './utils/input.js';
+import { TouchControls } from './ui/touchControls.js';
 import { Player } from './entities/player.js';
 import { Enemy } from './entities/enemy.js';
 import { Fragment } from './entities/fragment.js';
@@ -38,6 +39,7 @@ let isGameOver = false;
 
 // Systems
 const input = new InputHandler();
+const touchControls = new TouchControls(input);
 const hud = new HUD();
 const spawnSystem = new SpawnSystem();
 const collisionSystem = new CollisionSystem();
@@ -46,6 +48,35 @@ const difficultySystem = new DifficultySystem();
 const backgroundSystem = new BackgroundSystem(Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
 const juiceSystem = new JuiceSystem();
 const soundSystem = new SoundSystem();
+// Sound Controls Binding
+const btnMusic = document.getElementById('btn-music');
+const btnSFX = document.getElementById('btn-sfx');
+
+if (btnMusic && btnSFX) {
+    btnMusic.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent game interaction
+        const isMuted = soundSystem.toggleMusic();
+        btnMusic.innerText = isMuted ? "MUSIC: OFF" : "MUSIC: ON";
+        btnMusic.classList.toggle('muted', isMuted);
+    });
+
+    btnSFX.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isMuted = soundSystem.toggleSFX();
+        btnSFX.innerText = isMuted ? "SFX: OFF" : "SFX: ON";
+        btnSFX.classList.toggle('muted', isMuted);
+    });
+
+    // Touch/Click to init sound (but don't toggle if clicking button)
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('sound-btn')) return;
+        soundSystem.resume();
+    }, { once: true });
+    document.addEventListener('touchstart', (e) => {
+        if (e.target.classList.contains('sound-btn')) return;
+        soundSystem.resume();
+    }, { once: true });
+}
 
 // UI Screens
 const startScreen = new StartScreen(startGameWrapper);
