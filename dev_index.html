@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glitch City</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <div id="hud">
+                <div class="hud-panel" id="stats-panel">
+                    <div id="score-display">SCORE <span id="score-value">0</span></div>
+                    <div id="timer-display">TIME <span id="timer-value">00:00</span></div>
+                </div>
+
+                <div class="hud-panel" id="health-panel">
+                    <!-- Health injected here by JS -->
+                </div>
+
+                <div class="hud-panel" id="glitch-panel">
+                    <div id="glitch-label">STABILITY</div>
+                    <div id="glitch-bar-bg">
+                        <div id="glitch-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="start-screen" class="screen active">
+                <h1>GLITCH CITY</h1>
+                <div id="best-score-display">BEST SCORE: <span id="start-best-score">0</span></div>
+                <p>Use WASD to Move. Avoid Glitches.</p>
+
+                <div id="level-select">
+                    <label for="level-range">LEVEL <span id="level-value">5</span></label>
+                    <input type="range" id="level-range" min="1" max="10" value="5">
+                </div>
+
+                <button id="start-btn" class="main-btn">PLAY</button>
+            </div>
+            <div id="game-over-screen" class="screen hidden">
+                <h1>SYSTEM CRASH</h1>
+                <div class="stats-container">
+                    <p>SCORE: <span id="final-score">0</span></p>
+                    <p>TIME: <span id="final-time">00:00</span></p>
+                    <p>BEST: <span id="game-over-best">0</span></p>
+                </div>
+                <button id="restart-btn" class="main-btn">PLAY AGAIN</button>
+                <button id="menu-btn" class="secondary-btn">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="src/main.js"></script>
+</body>
+
+</html>
