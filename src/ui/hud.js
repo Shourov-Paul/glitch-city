@@ -25,7 +25,8 @@ export class HUD {
     updateTimer(time) {
         const minutes = Math.floor(time / 60);
         const seconds = Math.floor(time % 60);
-        this.timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const milliseconds = Math.floor((time % 1) * 100);
+        this.timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(2, '0')}`;
     }
 
     updateHealth(health) {

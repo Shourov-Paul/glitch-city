@@ -302,7 +302,8 @@ function endGame() {
 
     const minutes = Math.floor(timeElapsed / 60);
     const seconds = Math.floor(timeElapsed % 60);
-    const timeFormatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const milliseconds = Math.floor((timeElapsed % 1) * 100);
+    const timeFormatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(2, '0')}`;
 
     gameOverScreen.show(score, timeFormatted);
 }
