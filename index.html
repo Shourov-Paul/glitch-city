@@ -1644,7 +1644,9 @@
 
             const scoreMult = difficultySystem.getScoreMultiplier();
             score += deltaTime * 10 * scoreMult;
+            timeElapsed += deltaTime;
             hud.updateScore(Math.floor(score));
+            hud.updateTimer(timeElapsed);
             hud.updateGlitchMeter(glitchSystem.getStability());
         }
 

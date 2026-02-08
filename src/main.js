@@ -236,7 +236,9 @@ function update(deltaTime) {
     // Update UI
     const scoreMult = difficultySystem.getScoreMultiplier();
     score += deltaTime * 10 * scoreMult; // Survival score also scaled
+    timeElapsed += deltaTime;
     hud.updateScore(Math.floor(score));
+    hud.updateTimer(timeElapsed);
     hud.updateGlitchMeter(glitchSystem.getStability());
 }
 
